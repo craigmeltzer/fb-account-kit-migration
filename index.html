@@ -14,51 +14,106 @@
       <p>Facebook announced <a href="https://developers.facebook.com/blog/post/2019/09/09/account-kit-services-no-longer-available-starting-march">Account Kit deprecation</a> on September 9, 2019.</p>
       <p>This guide will show you how to replace Account Kit functionality with <a href="https://twilio.com/docs/verify/api">Twilio Verify</a></p>
       <div class="content">
-        <p>FB account kit SMS login:</p>
-        <input value="+1" id="country_code" />
-        <input placeholder="phone number" id="phone_number"/>
-        <button onclick="smsLogin();">Login via SMS</button>
+        <p><a href="https://twilio.com/docs/verify/api">Twilio Verify</a> SMS login:</p>
+        <form class="form-inline">
+          <input value="+1" id="country_code" class="form-control"/>
+          <input placeholder="phone number" id="phone_number" class="form-control"/>
+          <input type="button" onclick="smsLoginTwilio();" class="btn btn-primary" value="Login via SMS" />
+        </form>
       </div>
+      <div class="modal" id="verification_modal">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-body">
+              <div class="row">
+                <div class="col-lg-12">
+                  <div class="result-message">
+                  </div>
+                  <div class="input-group input-group-lg">
+                    <input type="text" class="form-control input-lg" id="verification_code" placeholder="Enter the token sent to your device">
+                    <span class="input-group-btn">
+                      <button onclick="smsVerifyTwilio();" class="btn btn-primary btn-lg" type="submit">Verify</button>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
     </div>
   </body>
   <script>
-    // initialize Account Kit with CSRF protection
-    AccountKit_OnInteractive = function(){
-      AccountKit.init(
-        {
-          appId:"{{FACEBOOK_APP_ID}}", 
-          state:"{{csrf}}", 
-          version:"{{ACCOUNT_KIT_API_VERSION}}",
-          fbAppEventsEnabled:true,
-          redirect:"{{REDIRECT_URL}}"
-        }
-      );
-    };
+    var cc = null;
+    var pn = null;
 
-    // login callback
-    function loginCallback(response) {
-      if (response.status === "PARTIALLY_AUTHENTICATED") {
-        var code = response.code;
-        var csrf = response.state;
-        // Send code to server to exchange for access token
-      }
-      else if (response.status === "NOT_AUTHENTICATED") {
-        // handle authentication failure
-      }
-      else if (response.status === "BAD_PARAMS") {
-        // handle bad parameters
-      }
+    function flashStatus(alertType, message) {
+      var content = $(".result-message");
+      content.empty();
+      content.append(`<div class="alert alert-${alertType}" role="alert">${message}</div>`);
     }
 
-    // phone form submission handler
-    function smsLogin() {
-      var countryCode = document.getElementById("country_code").value;
-      var phoneNumber = document.getElementById("phone_number").value;
-      AccountKit.login(
-        'PHONE', 
-        {countryCode: countryCode, phoneNumber: phoneNumber}, // will use default values if not specified
-        loginCallback
-      );
+    function smsLoginTwilio() {
+      var countryCode = document.getElementById("country_code").value.replace(/\W/g, ''); // strip special characters
+      var phoneNumber = document.getElementById("phone_number").value.replace(/\W/g, ''); // strip special characters
+
+      // save for checking
+      cc = countryCode;
+      pn = phoneNumber;
+
+      const formData = new FormData();
+      formData.append("country_code", countryCode);
+      formData.append("phone_number", phoneNumber);
+
+      // deploy a backend server or write your own
+      // Python:  https://github.com/robinske/verify-server
+      // Node.js: https://github.com/robinske/verify-server-node
+      // Golang:  https://github.com/robinske/go-verify-backend
+      fetch("https://fb-acc-kit-migration.herokuapp.com/start", {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then((json) => {
+          console.log(json);
+          if (json.success) {
+            $(".modal").modal("show");
+          } else {
+            console.log("Error sending token.")
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    }
+
+    function smsVerifyTwilio() {
+      var code = document.getElementById("verification_code").value;
+
+      const formData = new FormData();
+      formData.append("country_code", cc);
+      formData.append("phone_number", pn);
+      formData.append("verification_code", code);
+
+      fetch("https://fb-acc-kit-migration.herokuapp.com/check", {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then((json) => {
+          if (json.success) {
+            flashStatus("success", "Success!");
+            console.log("Successfully verified the token.");
+          } else {
+            flashStatus("danger", "Incorrect code, try again.");
+            $("#verification_code").val("");
+            console.log("Incorrect token.")
+          }
+        })
+        .catch((err) => {
+          var content = $(".result-message");
+          console.log(err);
+        });
     }
   </script>
 </html>
