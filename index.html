@@ -73,11 +73,14 @@
           method: 'POST',
           body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+          $(".modal").modal("show");
+          return response.json()
+        })
         .then((json) => {
           console.log(json);
           if (json.success) {
-            $(".modal").modal("show");
+            console.log("Successfully sent token.")
           } else {
             console.log("Error sending token.")
           }
