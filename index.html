@@ -54,8 +54,8 @@
     }
 
     function smsLoginTwilio() {
-      var countryCode = $("#country_code").value.replace(/\W/g, ''); // strip special characters
-      var phoneNumber = $("#phone_number").value.replace(/\W/g, ''); // strip special characters
+      var countryCode = $("#country_code").val().replace(/\W/g, ''); // strip special characters
+      var phoneNumber = $("#phone_number").val().replace(/\W/g, ''); // strip special characters
 
       // save for checking
       cc = countryCode;
@@ -93,7 +93,7 @@
     }
 
     function smsVerifyTwilio() {
-      var code = $("#verification_code").value;
+      var code = $("#verification_code").val();
 
       // Twilio functions do not accept multipart/form-data
       const data = new URLSearchParams();
