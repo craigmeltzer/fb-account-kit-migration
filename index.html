@@ -54,26 +54,27 @@
     }
 
     function smsLoginTwilio() {
-      var countryCode = document.getElementById("country_code").value.replace(/\W/g, ''); // strip special characters
-      var phoneNumber = document.getElementById("phone_number").value.replace(/\W/g, ''); // strip special characters
+      var countryCode = $("#country_code").value.replace(/\W/g, ''); // strip special characters
+      var phoneNumber = $("#phone_number").value.replace(/\W/g, ''); // strip special characters
 
       // save for checking
       cc = countryCode;
       pn = phoneNumber;
 
-      const formData = new FormData();
-      formData.append("country_code", countryCode);
-      formData.append("phone_number", phoneNumber);
+      // Twilio functions do not accept multipart/form-data
+      const data = new URLSearchParams();
+      data.append("country_code", countryCode);
+      data.append("phone_number", phoneNumber);
 
-      // deploy a backend server or write your own
-      // Python:  https://github.com/robinske/verify-server
-      // Node.js: https://github.com/robinske/verify-server-node
-      // Golang:  https://github.com/robinske/go-verify-backend
-      fetch("https://fb-acc-kit-migration.herokuapp.com/start", {
+      // Create your own Twilio Function 
+      // https://www.twilio.com/console/functions/manage
+      fetch("https://berserk-engine-4152.twil.io/start", {
           method: 'POST',
-          body: formData
+          body: data
         })
         .then(response => {
+          var content = $(".result-message");
+          content.empty();
           $(".modal").modal("show");
           return response.json()
         })
@@ -91,16 +92,19 @@
     }
 
     function smsVerifyTwilio() {
-      var code = document.getElementById("verification_code").value;
+      var code = $("#verification_code").value;
 
-      const formData = new FormData();
-      formData.append("country_code", cc);
-      formData.append("phone_number", pn);
-      formData.append("verification_code", code);
+      // Twilio functions do not accept multipart/form-data
+      const data = new URLSearchParams();
+      data.append("country_code", cc);
+      data.append("phone_number", pn);
+      data.append("verification_code", code);
 
-      fetch("https://fb-acc-kit-migration.herokuapp.com/check", {
+      // Create your own Twilio Function 
+      // https://www.twilio.com/console/functions/manage
+      fetch("https://berserk-engine-4152.twil.io/check", {
           method: 'POST',
-          body: formData
+          body: data
         })
         .then(response => response.json())
         .then((json) => {
@@ -108,7 +112,7 @@
             flashStatus("success", "Success!");
             console.log("Successfully verified the token.");
           } else {
-            flashStatus("danger", "Incorrect code, try again.");
+            flashStatus("danger", json.message);
             $("#verification_code").val("");
             console.log("Incorrect token.")
           }
